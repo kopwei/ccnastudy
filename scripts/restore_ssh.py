@@ -31,18 +31,22 @@ def load_config_file(filename):
 def restore_device(device, password):
     print(f"\n--- Connecting to {device['name']} ({device['host']}) ---")
     
-    # Add credentials to the device dict
-    device['username'] = 'admin'
-    device['password'] = password
-    device['secret'] = password # Assuming enable password is same
-    
     config_lines = load_config_file(device['base_config'])
     if not config_lines:
         print("Skipping due to missing config file.")
         return
 
+    # Build connection dict with only netmiko-compatible parameters
+    connection_params = {
+        'device_type': device['device_type'],
+        'host': device['host'],
+        'username': 'admin',
+        'password': password,
+        'secret': password
+    }
+
     try:
-        net_connect = ConnectHandler(**device)
+        net_connect = ConnectHandler(**connection_params)
         net_connect.enable()
         
         print(f"Connected to {device['name']}. Pushing base configuration...")

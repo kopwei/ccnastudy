@@ -16,9 +16,26 @@ The `scripts/` directory contains tools to help reset the lab environment to a c
 
 ### Prerequisites
 
-Install the required Python libraries:
+This project uses **uv** for fast Python dependency management and virtual environments.
+
+#### Initial Setup
+
+1. **Install uv** (if not already installed):
 ```bash
-pip install -r scripts/requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env  # Add uv to PATH
+```
+
+2. **Create and activate virtual environment**:
+```bash
+# From the project root
+uv venv
+source .venv/bin/activate
+```
+
+3. **Install dependencies**:
+```bash
+uv pip install -r scripts/requirements.txt
 ```
 
 ### 1. Network Restore (`restore_ssh.py`)
