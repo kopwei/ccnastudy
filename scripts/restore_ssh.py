@@ -28,7 +28,7 @@ def load_config_file(filename):
     print(f"Error: Config file {filename} not found in search paths.")
     return []
 
-def restore_device(device, password):
+def restore_device(device, password=None, use_keys=True):
     print(f"\n--- Connecting to {device['name']} ({device['host']}) ---")
     
     config_lines = load_config_file(device['base_config'])
@@ -41,9 +41,15 @@ def restore_device(device, password):
         'device_type': device['device_type'],
         'host': device['host'],
         'username': 'admin',
-        'password': password,
-        'secret': password
     }
+    
+    # Use SSH key or password authentication
+    if use_keys:
+        connection_params['use_keys'] = True
+        connection_params['key_file'] = os.path.expanduser('~/.ssh/id_ed25519')
+    else:
+        connection_params['password'] = password
+        connection_params['secret'] = password
 
     try:
         net_connect = ConnectHandler(**connection_params)
@@ -65,13 +71,29 @@ def restore_device(device, password):
 
 def main():
     print("WARNING: This script will overwrite the running configuration of your lab devices.")
-    print("Ensure you have updated the 'DEVICES' list in the script with the correct credentials or enter it now.")
+    print("Ensure the base config files are correct before proceeding.")
     
-    # Prompt for password to avoid hardcoding it in the script for safety
-    password = getpass.getpass("Enter the unified admin password for all devices: ")
+    # Check if SSH key exists
+    ssh_key_path = os.path.expanduser('~/.ssh/id_ed25519')
+    has_ssh_key = os.path.exists(ssh_key_path)
+    
+    if has_ssh_key:
+        print(f"\n✓ SSH key found: {ssh_key_path}")
+        auth_choice = input("Use SSH key authentication? (y/n, default: y): ").strip().lower()
+        use_keys = auth_choice != 'n'
+    else:
+        print("\nNo SSH key found. Will use password authentication.")
+        use_keys = False
+    
+    password = None
+    if not use_keys:
+        password = getpass.getpass("\nEnter the admin password for all devices: ")
+    
+    print(f"\nAuthentication method: {'SSH Key' if use_keys else 'Password'}")
+    input("\nPress Enter to continue or Ctrl+C to abort...")
     
     for device in DEVICES:
-        restore_device(device, password)
+        restore_device(device, password, use_keys)
 
 if __name__ == "__main__":
     main()

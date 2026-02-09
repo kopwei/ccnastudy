@@ -1,0 +1,31 @@
+---
+# Backup current configurations from all devices
+# Usage: ansible-playbook playbooks/backup_configs.yml
+
+- name: Backup Device Configurations
+  hosts: all
+  gather_facts: false
+  
+  vars:
+    backup_dir: "../backups/{{ ansible_date_time.date }}"
+  
+  tasks:
+    - name: Create backup directory
+      ansible.builtin.file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+    
+    - name: Backup running configuration
+      cisco.ios.ios_config:
+        backup: yes
+        backup_options:
+          filename: "{{ inventory_hostname }}_running.cfg"
+          dir_path: "{{ backup_dir }}"
+      register: backup_result
+    
+    - name: Display backup location
+      ansible.builtin.debug:
+        msg: "Configuration backed up to {{ backup_result.backup_path }}"

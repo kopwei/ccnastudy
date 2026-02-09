@@ -8,7 +8,10 @@ This repository contains documentation, lab scenarios, and automation scripts fo
     *   [Network Architecture](docs/architecture.md)
 *   **`labs/`**: Study labs and configurations.
     *   [Lab 01: Basic VLAN & STP](labs/lab01_basic_vlan_stp/README.md)
-*   **`scripts/`**: Automation tools for resetting and configuring devices.
+*   **`scripts/`**: Python automation tools for resetting and configuring devices.
+*   **`ansible/`**: Ansible playbooks for declarative device configuration.
+    *   [Ansible README](ansible/README.md)
+
 
 ## Automation Scripts
 
@@ -57,6 +60,14 @@ python3 scripts/restore_serial.py
 Follow the on-screen prompts to select the device and serial port.
 
 ## Lab Workflow
+
+### Manual Configuration
 1.  Read the lab objectives in `labs/`.
 2.  Configure your devices according to the lab instructions.
 3.  Upon completion, run `scripts/restore_ssh.py` to reset the environment for the next study session.
+
+### Automated Configuration (Recommended)
+1.  Use Ansible playbooks in `ansible/playbooks/` for declarative configuration.
+2.  See [Ansible README](ansible/README.md) for detailed usage.
+3.  Example: `cd ansible && ansible-playbook playbooks/lab01_vlan_stp.yml`
+

@@ -1,0 +1,64 @@
+---
+# Lab 01: Configure VLANs and STP
+# Usage: ansible-playbook playbooks/lab01_vlan_stp.yml
+
+- name: Lab 01 - Configure VLANs and STP
+  hosts: switches
+  gather_facts: false
+  
+  vars:
+    vtp_domain: CCNA
+    vtp_mode_map:
+      switch3560cx: server
+      switch2960cx: client
+      switch2960s_1: client
+      switch2960s_2: client
+  
+  tasks:
+    - name: Configure VTP domain and mode
+      cisco.ios.ios_config:
+        lines:
+          - vtp domain {{ vtp_domain }}
+          - vtp mode {{ vtp_mode_map[inventory_hostname] }}
+    
+    - name: Create VLANs (on VTP server only)
+      cisco.ios.ios_vlans:
+        config:
+          - vlan_id: 10
+            name: Sales
+          - vlan_id: 20
+            name: Engineering
+          - vlan_id: 99
+            name: Management
+        state: merged
+      when: inventory_hostname == 'switch3560cx'
+    
+    - name: Configure STP root bridge (3560CX)
+      cisco.ios.ios_config:
+        lines:
+          - spanning-tree vlan 10,20 root primary
+      when: inventory_hostname == 'switch3560cx'
+    
+    - name: Configure STP secondary root (2960CX)
+      cisco.ios.ios_config:
+        lines:
+          - spanning-tree vlan 10,20 root secondary
+      when: inventory_hostname == 'switch2960cx'
+    
+    - name: Assign access ports (2960S switches)
+      cisco.ios.ios_l2_interfaces:
+        config:
+          - name: "{{ item.interface }}"
+            mode: access
+            access:
+              vlan: "{{ item.vlan }}"
+      loop:
+        - { interface: "FastEthernet1/0/1", vlan: 10 }
+        - { interface: "FastEthernet1/0/2", vlan: 10 }
+        - { interface: "FastEthernet1/0/6", vlan: 20 }
+        - { interface: "FastEthernet1/0/7", vlan: 20 }
+      when: "'2960s' in inventory_hostname"
+    
+    - name: Save configuration
+      cisco.ios.ios_config:
+        save_when: modified

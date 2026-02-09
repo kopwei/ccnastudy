@@ -1,0 +1,29 @@
+---
+# Restore devices to base configuration
+# Usage: ansible-playbook playbooks/restore_base_config.yml
+
+- name: Restore Base Configuration
+  hosts: all
+  gather_facts: false
+  
+  tasks:
+    - name: Load base configuration from file
+      cisco.ios.ios_config:
+        src: "../scripts/base_configs/{{ base_config_file }}"
+        save_when: modified
+      vars:
+        base_config_file: >-
+          {%- if inventory_hostname == 'router891' -%}
+            router_891.cfg
+          {%- elif inventory_hostname == 'switch3560cx' -%}
+            switch_3560cx.cfg
+          {%- elif inventory_hostname == 'switch2960cx' -%}
+            switch_2960cx.cfg
+          {%- elif inventory_hostname in ['switch2960s_1', 'switch2960s_2'] -%}
+            switch_2960s.cfg
+          {%- endif -%}
+      register: config_result
+    
+    - name: Display configuration result
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ 'Configuration updated' if config_result.changed else 'No changes needed' }}"

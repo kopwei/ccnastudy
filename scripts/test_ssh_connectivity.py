@@ -15,21 +15,27 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     from inventory import DEVICES
 
-def test_device_connection(device, password):
+def test_device_connection(device, password=None, use_keys=True):
     """Test SSH connection to a single device."""
     print(f"\nTesting {device['name']} ({device['host']})... ", end='', flush=True)
     
     # Build connection dict with only netmiko-compatible parameters
-    test_device = {
+    connection_params = {
         'device_type': device['device_type'],
         'host': device['host'],
         'username': 'admin',
-        'password': password,
-        'secret': password
     }
     
+    # Try SSH key authentication first if enabled
+    if use_keys:
+        connection_params['use_keys'] = True
+        connection_params['key_file'] = os.path.expanduser('~/.ssh/id_ed25519')
+    else:
+        connection_params['password'] = password
+        connection_params['secret'] = password
+    
     try:
-        net_connect = ConnectHandler(**test_device)
+        net_connect = ConnectHandler(**connection_params)
         net_connect.enable()
         
         # Get hostname to verify we're connected
@@ -51,11 +57,27 @@ def main():
     print("SSH Connectivity Test for Lab Devices")
     print("=" * 60)
     
-    password = getpass.getpass("\nEnter the admin password for all devices: ")
+    # Check if SSH key exists
+    ssh_key_path = os.path.expanduser('~/.ssh/id_ed25519')
+    has_ssh_key = os.path.exists(ssh_key_path)
+    
+    if has_ssh_key:
+        print(f"\n✓ SSH key found: {ssh_key_path}")
+        auth_choice = input("Use SSH key authentication? (y/n, default: y): ").strip().lower()
+        use_keys = auth_choice != 'n'
+    else:
+        print("\nNo SSH key found. Will use password authentication.")
+        use_keys = False
+    
+    password = None
+    if not use_keys:
+        password = getpass.getpass("\nEnter the admin password for all devices: ")
+    
+    print(f"\nAuthentication method: {'SSH Key' if use_keys else 'Password'}")
     
     results = []
     for device in DEVICES:
-        success = test_device_connection(device, password)
+        success = test_device_connection(device, password, use_keys)
         results.append((device['name'], success))
     
     # Summary

@@ -1,0 +1,33 @@
+---
+# Test connectivity to all lab devices
+# Usage: ansible-playbook playbooks/test_connectivity.yml
+
+- name: Test SSH Connectivity to All Devices
+  hosts: all
+  gather_facts: false
+  
+  tasks:
+    - name: Gather basic device facts
+      cisco.ios.ios_facts:
+        gather_subset:
+          - hardware
+      register: device_facts
+    
+    - name: Display device information
+      ansible.builtin.debug:
+        msg: |
+          Device: {{ inventory_hostname }}
+          Model: {{ ansible_net_model }}
+          IOS Version: {{ ansible_net_version }}
+          Hostname: {{ ansible_net_hostname }}
+          Serial: {{ ansible_net_serialnum }}
+    
+    - name: Check SSH configuration
+      cisco.ios.ios_command:
+        commands:
+          - show ip ssh
+      register: ssh_status
+    
+    - name: Display SSH status
+      ansible.builtin.debug:
+        var: ssh_status.stdout_lines
