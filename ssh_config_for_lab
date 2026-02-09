@@ -1,0 +1,44 @@
+Host cisco891
+  Hostname 192.168.2.11
+  User admin
+  KexAlgorithms diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1
+  Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+  HostKeyAlgorithms +ssh-rsa
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+Host 2960cx
+  Hostname 192.168.2.29
+  User admin
+  KexAlgorithms diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1
+  Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+  HostKeyAlgorithms +ssh-rsa
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+Host 3560cx
+  Hostname 192.168.2.35
+  User admin
+  KexAlgorithms diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1
+  Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+  HostKeyAlgorithms +ssh-rsa
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+Host 2960s1
+  Hostname 192.168.2.21
+  User admin
+  KexAlgorithms diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1
+  Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+  HostKeyAlgorithms +ssh-rsa
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+Host 2960s2
+  Hostname 192.168.2.22
+  User admin
+  KexAlgorithms diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1
+  Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+  HostKeyAlgorithms +ssh-rsa
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null

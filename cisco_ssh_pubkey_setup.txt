@@ -1,0 +1,48 @@
+To configure SSH public key authentication on your Cisco switches, follow these steps:
+
+1.  **Generate RSA Cryptographic Keys on the Cisco Device:**
+    You need to generate an RSA key pair on each Cisco device.
+    ```
+    configure terminal
+    crypto key generate rsa general-keys modulus 2048
+    exit
+    ```
+    (You can use `modulus 1024` for older devices if 2048 is not supported, but 2048 provides better security.)
+
+2.  **Configure SSH Parameters (if not already done):**
+    Ensure SSH version 2 is enabled and VTY lines are configured for SSH.
+    ```
+    configure terminal
+    ip domain-name your_domain.local
+    ip ssh version 2
+    username <your_username> privilege 15 secret <your_password>
+    line vty 0 4
+    transport input ssh
+    login local
+    exit
+    exit
+    ```
+    Replace `<your_username>` and `<your_password>` with your desired credentials.
+
+3.  **Add Your SSH Public Key to the Cisco Device:**
+    This is where you associate your public key (e.g., from `~/.ssh/id_rsa.pub` on your client machine) with your username on the Cisco device.
+
+    First, get your public key from your client machine. On your Linux/macOS machine, you can view it with:
+    `cat ~/.ssh/id_rsa.pub` (or `id_ed25519.pub` if you use an ED25519 key)
+
+    Copy the *entire* output of that command (e.g., `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... user@hostname`).
+
+    Then, on the Cisco device:
+    ```
+    configure terminal
+    ip ssh pubkey-chain
+      username <your_username>
+       key-string
+        <paste_your_public_key_string_here>
+       exit
+      exit
+    end
+    ```
+    **Important:** Paste the entire public key string, including `ssh-rsa` (or `ssh-ed25519`) and the comment at the end. The key string might wrap in the terminal, but ensure you paste it as one continuous string.
+
+After these steps, you should be able to SSH to the Cisco device using your private key without needing a password. Remember to perform these steps on all 5 equipment where you want passwordless SSH.
