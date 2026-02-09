@@ -2,12 +2,17 @@
 """
 Script to add an SSH public key to Cisco IOS devices.
 Properly formats the key for Cisco's ip ssh pubkey-chain command.
+
+Usage:
+  python3 add_ssh_key.py                    # All devices
+  python3 add_ssh_key.py --devices 891 3560  # Only specific devices
 """
 import getpass
 import sys
 import os
 import time
 import textwrap
+import argparse
 from netmiko import ConnectHandler
 from netmiko.exceptions import NetmikoAuthenticationException, NetmikoTimeoutException
 
@@ -17,6 +22,7 @@ try:
 except ImportError:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     from inventory import DEVICES
+
 
 def get_public_key_content(key_file_path):
     """Reads and validates the content of the public key file."""
@@ -73,17 +79,22 @@ def add_key_to_device(device, username, password, key_lines):
         if not net_connect.check_enable_mode():
             net_connect.enable()
         
-        # Enter config mode
+        # First, remove any existing pubkey config for this user
+        print(f"  Clearing old keys...")
         net_connect.write_channel("configure terminal\n")
         time.sleep(0.5)
         net_connect.read_channel()
         
-        # Enter pubkey-chain mode
         net_connect.write_channel("ip ssh pubkey-chain\n")
         time.sleep(0.5)
         net_connect.read_channel()
         
-        # Specify username
+        # Remove existing username config (this clears all keys for the user)
+        net_connect.write_channel(f"no username {username}\n")
+        time.sleep(0.5)
+        net_connect.read_channel()
+        
+        # Now re-add the username with the new key
         net_connect.write_channel(f"username {username}\n")
         time.sleep(0.5)
         net_connect.read_channel()
@@ -173,10 +184,25 @@ def verify_ssh_key_auth(device, username, private_key_path):
         return False
 
 def main():
+    parser = argparse.ArgumentParser(description='Add SSH public key to Cisco devices')
+    parser.add_argument('--devices', nargs='+', help='Filter devices by name (e.g., 891 3560)')
+    args = parser.parse_args()
+    
+    # Filter devices if specified
+    if args.devices:
+        target_devices = [d for d in DEVICES if any(f.lower() in d['name'].lower() for f in args.devices)]
+        if not target_devices:
+            print(f"No devices found matching: {args.devices}")
+            print(f"Available devices: {[d['name'] for d in DEVICES]}")
+            return
+    else:
+        target_devices = DEVICES
+    
     print("=" * 60)
     print("Add SSH Public Key to Cisco Lab Devices")
     print("=" * 60)
     print("\nNOTE: Cisco IOS only supports RSA keys!")
+    print(f"Target devices: {[d['name'] for d in target_devices]}")
     
     default_key = "~/.ssh/id_rsa_cisco.pub"
     if not os.path.exists(os.path.expanduser(default_key)):
@@ -199,7 +225,7 @@ def main():
     admin_username = input("\nAdmin username (default: admin): ").strip() or "admin"
     admin_password = getpass.getpass("Admin password: ")
     
-    print(f"\nAdding key for '{admin_username}' on {len(DEVICES)} devices.")
+    print(f"\nAdding key for '{admin_username}' on {len(target_devices)} devices.")
     confirm = input("Continue? (y/n): ").strip().lower()
     if confirm != 'y':
         print("Aborted.")
@@ -208,13 +234,13 @@ def main():
     success_count = 0
     added_devices = []
     
-    for device in DEVICES:
+    for device in target_devices:
         if add_key_to_device(device, admin_username, admin_password, key_lines):
             success_count += 1
             added_devices.append(device)
     
     print("\n" + "=" * 60)
-    print(f"KEY ADDITION: {success_count}/{len(DEVICES)} devices")
+    print(f"KEY ADDITION: {success_count}/{len(target_devices)} devices")
     print("=" * 60)
     
     if added_devices:
@@ -233,3 +259,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
