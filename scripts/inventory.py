@@ -1,35 +1,46 @@
 # Device Inventory
-# Shared by restore_ssh.py and restore_serial.py
+# Shared by all automation scripts
+# role: 'router', 'l3_switch', or 'l2_switch'
+# mgmt_interface: the management interface to preserve during cleanup
+# mgmt_vlan: the management VLAN to preserve (never deleted)
 
 DEVICES = [
     {
         'device_type': 'cisco_ios',
         'host': '192.168.2.11',
-        'base_config': 'router_891.cfg',
-        'name': 'Router 891'
+        'name': 'Router 891',
+        'role': 'router',
+        'mgmt_interface': 'FastEthernet8',
     },
     {
         'device_type': 'cisco_ios',
         'host': '192.168.2.35',
-        'base_config': 'switch_3560cx.cfg',
-        'name': 'Switch 3560CX'
+        'name': 'Switch 3560CX',
+        'role': 'l3_switch',
+        'mgmt_interface': 'Vlan99',
+        'mgmt_vlan': 99,
     },
     {
         'device_type': 'cisco_ios',
         'host': '192.168.2.29',
-        'base_config': 'switch_2960cx.cfg',
-        'name': 'Switch 2960CX'
+        'name': 'Switch 2960CX',
+        'role': 'l2_switch',
+        'mgmt_interface': 'Vlan99',
+        'mgmt_vlan': 99,
     },
     {
         'device_type': 'cisco_ios',
         'host': '192.168.2.21',
-        'base_config': 'switch_2960s.cfg',
-        'name': 'Switch 2960S-1'
+        'name': 'Switch 2960S-1',
+        'role': 'l2_switch',
+        'mgmt_interface': 'Vlan99',
+        'mgmt_vlan': 99,
     },
     {
         'device_type': 'cisco_ios',
         'host': '192.168.2.22',
-        'base_config': 'switch_2960s.cfg',
-        'name': 'Switch 2960S-2'
+        'name': 'Switch 2960S-2',
+        'role': 'l2_switch',
+        'mgmt_interface': 'Vlan1',
     }
 ]

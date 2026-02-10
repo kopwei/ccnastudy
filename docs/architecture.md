@@ -12,7 +12,7 @@ graph TD
         Netgear
     end
 
-    Netgear -- FE0 (192.168.2.11) --> Router[Cisco 891 Router]
+    Netgear -- FA8 (192.168.2.11) --> Router[Cisco 891 Router]
     Netgear -- Ge10 (192.168.2.35, VLAN 99) --> Switch1[Cisco 3560CX Switch]
     Netgear -- Ge10 (192.168.2.29, VLAN 99) --> Switch2[Cisco 2960CX Switch]
     Netgear -- FE0 (192.168.2.21) --> Switch3[Cisco 2960S Switch 1]
@@ -34,7 +34,7 @@ IP addresses are reserved via DHCP MAC binding on the main router.
 | Device Name | Model | Management Port | IP Address | Notes |
 | :--- | :--- | :--- | :--- | :--- |
 | **Mgmt Switch** | Netgear 108Tv2 | - | *Active* | Connects all management ports |
-| **Router** | Cisco 891 | FE0 | `192.168.2.11` | Gateway/Router |
+| **Router** | Cisco 891 | FA8 | `192.168.2.11` | Gateway/Router |
 | **Switch 1** | Cisco 3560CX | Ge10 | `192.168.2.35` | VLAN 99 Mgmt |
 | **Switch 2** | Cisco 2960CX | Ge10 | `192.168.2.29` | VLAN 99 Mgmt |
 | **Switch 3** | Cisco 2960S | FastEthernet 0 | `192.168.2.21` | 24 Ports |
@@ -45,7 +45,8 @@ IP addresses are reserved via DHCP MAC binding on the main router.
 *   **Management Network**: 192.168.2.0/24
 *   **SSH Access**: Enabled on all devices with a unified admin user/password.
 *   **Method**:
-    *   **Router & 2960S**: Connect via dedicated management port (FE0).
+    *   **Router**: Connect via dedicated management port (FA8).
+    *   **2960S**: Connect via dedicated management port (FE0).
     *   **3560CX & 2960CX**: Connect via Ge10 port assigned to VLAN 99.
 
 ## Automation Constraints
