@@ -6,17 +6,17 @@ This document describes the home lab setup for CCNA/CCNP study.
 
 ```mermaid
 graph TD
-    UserPC[User PC / Router (192.168.2.0/24)] --> Netgear[Netgear 108Tv2 (Management Switch)]
+    UserPC["User PC / Router (192.168.2.0/24)"] --> Netgear["Netgear 108Tv2 (Management Switch)"]
     
     subgraph Management_Network
         Netgear
     end
 
-    Netgear -- FA8 (192.168.2.11) --> Router[Cisco 891 Router]
-    Netgear -- Ge10 (192.168.2.35, VLAN 99) --> Switch1[Cisco 3560CX Switch]
-    Netgear -- Ge10 (192.168.2.29, VLAN 99) --> Switch2[Cisco 2960CX Switch]
-    Netgear -- FE0 (192.168.2.21) --> Switch3[Cisco 2960S Switch 1]
-    Netgear -- FE0 (192.168.2.22) --> Switch4[Cisco 2960S Switch 2]
+    Netgear -- "FA8 (192.168.2.11)" --> Router["Cisco 891 Router"]
+    Netgear -- "Ge10 (192.168.2.35, VLAN 99)" --> Switch1["Cisco 3560CX Switch"]
+    Netgear -- "Ge10 (192.168.2.29, VLAN 99)" --> Switch2["Cisco 2960CX Switch"]
+    Netgear -- "FE0 (192.168.2.21)" --> Switch3["Cisco 2960S Switch 1"]
+    Netgear -- "FE0 (192.168.2.22)" --> Switch4["Cisco 2960S Switch 2"]
 
     style Netgear fill:#f9f,stroke:#333,stroke-width:2px
     style Router fill:#ff9,stroke:#333,stroke-width:2px
