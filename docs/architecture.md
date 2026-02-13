@@ -35,8 +35,8 @@ IP addresses are reserved via DHCP MAC binding on the main router.
 | :--- | :--- | :--- | :--- | :--- |
 | **Mgmt Switch** | Netgear 108Tv2 | - | *Active* | Connects all management ports |
 | **Router** | Cisco 891 | FA8 | `192.168.2.11` | Gateway/Router |
-| **Switch 1** | Cisco 3560CX | Ge10 | `192.168.2.35` | VLAN 99 Mgmt |
-| **Switch 2** | Cisco 2960CX | Ge10 | `192.168.2.29` | VLAN 99 Mgmt |
+| **Switch 1** | Cisco 3850 | Gi1/0/48 (Vlan1) | `192.168.2.38` | L3 Switch |
+| **Switch 2** | Cisco 3850 | Gi1/0/48 (Vlan1) | `192.168.2.39` | L3 Switch |
 | **Switch 3** | Cisco 2960S | FastEthernet 0 | `192.168.2.21` | 24 Ports |
 | **Switch 4** | Cisco 2960S | FastEthernet 0 | `192.168.2.22` | 24 Ports |
 
@@ -47,7 +47,7 @@ IP addresses are reserved via DHCP MAC binding on the main router.
 *   **Method**:
     *   **Router**: Connect via dedicated management port (FA8).
     *   **2960S**: Connect via dedicated management port (FE0).
-    *   **3560CX & 2960CX**: Connect via Ge10 port assigned to VLAN 99.
+    *   **3850S**: Connect via Gi1/0/48 (or any assigned port) on Vlan1.
 
 ## Automation Constraints
 

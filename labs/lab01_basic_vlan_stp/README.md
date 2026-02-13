@@ -11,44 +11,106 @@ The goal of this lab is to establish basic Layer 2 connectivity between the swit
 *   CDP/LLDP neighbor discovery.
 
 ## Topology
-*   **Switches**: Use all 4 switches (3560CX, 2960CX, 2x 2960S).
-*   **Connections**: Ensure trunk links are established between all switches (full mesh or ring if cabling permits, otherwise daisy chain).
+*   **Switches**: 2x 3850 (3850S1, 3850S2) and 2x 2960S (2960S-1, 2960S-2).
+*   **Connections (Ring Topology)**:
+    1.  **3850S1** [G1/0/1] <--> [G1/0/1] **3850S2**
+    2.  **3850S2** [G1/0/2] <--> [G0/1] **2960S-2**
+    3.  **2960S-2** [G0/2] <--> [G0/2] **2960S-1**
+    4.  **2960S-1** [G0/1] <--> [G1/0/2] **3850S1**
+*   **Trunks**: All inter-switch links should be configured as 802.1Q Trunks.
+
+## Why VTP before STP?
+*   **VTP (Layer 2 Management)**: Automatically synchronizes the VLAN database. While not strictly required for STP to function, it ensures that all switches "know" about the same VLANs, allowing STP to build a loop-free tree for each one consistently.
+*   **STP (Layer 2 Loop Prevention)**: Runs independently for each VLAN (PVST+). By setting up VTP first, we ensure the infrastructure is ready before we start injecting traffic into new VLANs.
+
+---
 
 ## Configuration Steps
 
-### 1. VLAN Cleanup (Pre-lab)
-*   Ensure all previous non-management VLANs are removed.
-*   Ensure VTP revision number is lower or reset (change domain name to reset).
+### Phase 1: Pre-Connection Configuration (Standalone)
+*Perform these steps on each switch via the management network BEFORE connecting the inter-switch cables.*
 
-### 2. VTP Configuration
-*   Configure VTP Domain: `CCNA`
-*   Configure 3560CX as VTP Server.
-*   Configure others as VTP Clients.
+#### 1. Device Reset & Basic VTP
+```ios
+# On all switches
+conf t
+hostname 3850S1  # (Match your inventory: 3850S1, 3850S2, 2960S-1, 2960S-2)
 
-### 3. VLAN Creation
-*   On the VTP Server, create:
-    *   VLAN 10: Name `Sales`
-    *   VLAN 20: Name `Engineering`
-    *   VLAN 99: Name `Management` (Should already exist)
+# Set VTP Domain and Password
+vtp domain CCNA
+vtp password cisco
 
-### 4. Port Assignment
-*   Assign `Sales` to ports 1-5 on 2960S switches.
-*   Assign `Engineering` to ports 6-10 on 2960S switches.
-*   Configure Uplink ports as 802.1Q Trunks.
+# Set Mode
+# On 3850S1:
+vtp mode server
+# On others:
+vtp mode client
 
-### 5. STP Optimization
-*   Configure 3560CX as the **Root Bridge** for VLAN 10 and 20 (`spanning-tree vlan 10,20 root primary`).
-*   Configure 2960CX as the **Secondary Root** (`spanning-tree vlan 10,20 root secondary`).
+# Pre-configure Trunk ports
+interface range g1/0/1 - 2  # (Use correct port numbers for each switch)
+  switchport trunk encapsulation dot1q
+  switchport mode trunk
+exit
+```
 
-## Validation
-1.  **Check VLANs**: `show vlan brief` (Verify 10, 20 exist on all Client switches).
-2.  **Check Trunks**: `show interfaces trunk` (Verify allowed VLANs and native VLAN).
-3.  **Check STP**: `show spanning-tree vlan 10` (Verify 3560CX is "This bridge is the root").
-4.  **Connectivity**: Ping between SVIs (if created) or hosts in the same VLAN.
+#### 2. VLAN Creation (On VTP Server ONLY)
+```ios
+# On 3850S1
+vlan 10
+  name Sales
+vlan 20
+  name Engineering
+```
 
-## Troubleshooting
-*   **VLANs not syncing**: Check VTP domain name (case sensitive), password, and trunk mode.
-*   **STP weirdness**: Check for Etherchannel misconfigurations or mismatching native VLANs.
+---
+
+### Phase 2: Physical Connectivity & Trunking
+*Connect the inter-switch cables according to the Ring Topology.*
+
+1.  **3850S1 [G1/0/1]** <--> **[G1/0/1] 3850S2**
+2.  **3850S2 [G1/0/2]** <--> **[G0/1] 2960S-2**
+3.  **2960S-2 [G0/2]** <--> **[G0/2] 2960S-1**
+4.  **2960S-1 [G0/1]** <--> **[G1/0/2] 3850S1**
+
+---
+
+### Phase 3: Post-Connection Optimization (STP)
+*Fine-tune the topology now that the links are active.*
+
+#### 1. STP Root Election
+```ios
+# Root Primary (3850S1)
+conf t
+spanning-tree vlan 1,10,20 root primary
+
+# Root Secondary (3850S2)
+conf t
+spanning-tree vlan 1,10,20 root secondary
+```
+
+#### 2. Wireshark Monitoring (Optional)
+```ios
+# On 3850S1
+monitor session 1 source interface g1/0/1 both
+monitor session 1 destination interface g1/0/10
+```
+
+---
+
+## Validation & Monitoring
+
+1.  **Verify VTP Sync**: `show vlan brief` on Client switches (VLAN 10/20 should appear).
+2.  **Verify Trunks**: `show interfaces trunk` (Status should be "trunking").
+3.  **Verify STP**: `show spanning-tree vlan 10`
+    *   3850S1 should say: `"This bridge is the root"`
+    *   Find the **Blocking (BLK)** port in the ring (usually on one of the 2960S switches).
+
+### Real-Time Monitoring
+```bash
+python3 scripts/monitor_stp.py --vlan 10
+```
 
 ## Cleanup
-Run the `restore_ssh.py` script to reset devices to the base management configuration.
+```bash
+python3 scripts/restore_ssh.py
+```

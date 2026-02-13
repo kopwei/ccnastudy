@@ -380,6 +380,16 @@ def cleanup_device(device, password=None, use_keys=True):
             cleanup_cmds = cleanup_router(net_connect, device)
         else:
             cleanup_cmds = cleanup_switch(net_connect, device)
+            
+            # --- Added VTP and Hostname Cleanup ---
+            print("  Checking VTP and Hostname status...")
+            # Reset VTP to transparent to clear lab data
+            cleanup_cmds.append("vtp domain clean")
+            cleanup_cmds.append("vtp mode transparent")
+            cleanup_cmds.append("no vtp password")
+            # Restore original hostname from inventory
+            cleanup_cmds.append(f"hostname {device['name']}")
+            # --------------------------------------
 
         if not cleanup_cmds:
             print(f"  ✓ {device['name']} is already clean - nothing to do")
