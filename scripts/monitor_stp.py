@@ -7,6 +7,7 @@ import time
 import os
 import sys
 import argparse
+import subprocess
 from netmiko import ConnectHandler
 from prettytable import PrettyTable
 
@@ -16,17 +17,50 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     from inventory import DEVICES
 
-def get_stp_status(net_connect, vlan=10):
+def get_host_alias(ip_address):
+    """Map inventory IP to SSH Config Host Alias."""
+    mapping = {
+        '192.168.2.21': '2960s1',
+        '192.168.2.22': '2960s2',
+        '192.168.2.38': '3850s1',
+        '192.168.2.39': '3850s2',
+    }
+    return mapping.get(ip_address, ip_address)
+
+def run_ssh_command(host, command):
+    """Run a command via system SSH and return output."""
+    # Use the alias if available, otherwise fallback to IP
+    # We include options to batch mode to avoid hanging
+    ssh_cmd = [
+        "ssh",
+        "-o", "BatchMode=yes",
+        "-o", "ConnectTimeout=5",
+        host,
+        command
+    ]
+    try:
+        result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            if "Permission denied" in result.stderr:
+                return f"Error: Permission denied (Check SSH keys)"
+            return f"Error: SSH failed ({result.stderr.strip()})"
+        return result.stdout
+    except subprocess.TimeoutExpired:
+        return "Error: Timeout"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+def get_stp_status(host_alias, vlan=10):
     """Get STP status for a specific VLAN."""
     cmd = f"show spanning-tree vlan {vlan}"
-    output = net_connect.send_command(cmd)
+    output = run_ssh_command(host_alias, cmd)
     
+    if output.startswith("Error"):
+        # Raise error to be caught by main loop
+        raise Exception(output)
+
     results = []
     # Simple parser for "show spanning-tree vlan X"
-    # Port      Role Sts Cost      Prio.Nbr Type
-    # --------- ---- --- --------- -------- --------------------------------
-    # Gi0/1     Root FWD 4         128.1    P2p 
-    
     lines = output.splitlines()
     start_parsing = False
     for line in lines:
@@ -46,28 +80,16 @@ def get_stp_status(net_connect, vlan=10):
 def monitor(vlan=10, interval=2):
     """Monitor STP status across all switches."""
     switches = [d for d in DEVICES if d['role'] in ['l2_switch', 'l3_switch']]
-    connections = {}
     
-    print(f"Connecting to {len(switches)} switches...")
+    # Prepare aliases once
+    device_targets = []
     for sw in switches:
-        try:
-            # Note: In a real lab, we'd use SSH keys or prompt for password
-            # For this script, we assume SSH key is set up as per previous work
-            conn = ConnectHandler(
-                device_type=sw['device_type'],
-                host=sw['host'],
-                username='admin',
-                use_keys=True,
-                key_file=os.path.expanduser('~/.ssh/id_rsa_cisco'),
-                disabled_algorithms={'pubkeys': ['rsa-sha2-256', 'rsa-sha2-512']}
-            )
-            connections[sw['name']] = conn
-            print(f"  Connected to {sw['name']}")
-        except Exception as e:
-            print(f"  Failed to connect to {sw['name']}: {e}")
+        alias = get_host_alias(sw['host'])
+        device_targets.append({'name': sw['name'], 'alias': alias})
+        print(f"  Target: {sw['name']} -> {alias}")
 
-    if not connections:
-        print("No connections established. Exiting.")
+    if not device_targets:
+        print("No L2/L3 switches found in inventory.")
         return
 
     try:
@@ -79,25 +101,24 @@ def monitor(vlan=10, interval=2):
             table = PrettyTable()
             table.field_names = ["Switch", "Interface", "Role", "Status (STP State)"]
             
-            for name, conn in connections.items():
+            for dev in device_targets:
                 try:
-                    status = get_stp_status(conn, vlan)
+                    status = get_stp_status(dev['alias'], vlan)
                     if not status:
-                        table.add_row([name, "N/A", "N/A", "No active ports in VLAN"])
-                    for entry in status:
-                        # Highlight FWD in green or BLK in red if using color, 
-                        # but keeping it simple for now
-                        table.add_row([name, entry['interface'], entry['role'], entry['status']])
+                         # Either command empty or empty VLAN
+                         # We check if it returned error code first inside get_stp_status
+                         table.add_row([dev['name'], "-", "-", "No active STP ports"])
+                    else:
+                        for entry in status:
+                            table.add_row([dev['name'], entry['interface'], entry['role'], entry['status']])
                 except Exception as e:
-                    table.add_row([name, "Error", "-", str(e)])
+                    table.add_row([dev['name'], "Error", "-", str(e)])
             
             print(table)
             time.sleep(interval)
+            
     except KeyboardInterrupt:
         print("\nMonitoring stopped.")
-    finally:
-        for conn in connections.values():
-            conn.disconnect()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='STP Real-Time Monitor')
