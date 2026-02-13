@@ -42,5 +42,19 @@ DEVICES = [
         'name': 'Switch 2960S-2',
         'role': 'l2_switch',
         'mgmt_interface': 'Vlan1',
+    },
+    {
+        'device_type': 'cisco_ios',
+        'host': '192.168.2.38',
+        'name': '3850S1',
+        'role': 'l3_switch',
+        'mgmt_interface': 'Vlan1', # Assuming Vlan1 for now, user didn't specify
+    },
+    {
+        'device_type': 'cisco_ios',
+        'host': '192.168.2.39',
+        'name': '3850S2',
+        'role': 'l3_switch',
+        'mgmt_interface': 'Vlan1', # Assuming Vlan1 for now
     }
 ]

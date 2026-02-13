@@ -229,7 +229,7 @@ def main():
     parser.add_argument('--use-ssh-key', help='Use this private key for connection auth (e.g., ~/.ssh/id_rsa_cisco)')
     # New arguments
     parser.add_argument('--username', help='Admin username (default: admin)')
-    parser.add_argument('--yes', action='store_true', help='Run without interactive prompts')
+    parser.add_argument('--yes', action='store_true', help='Run without confirmation prompts (still prompts for password if needed)')
     args = parser.parse_args()
 
     key_files = []
@@ -295,10 +295,10 @@ def main():
              print(f"Warning: SSH key not found at {key_path}, falling back to password.")
 
     if not use_keys:
-        if args.yes:
-             print("Error: Password required but running in non-interactive mode. Use --use-ssh-key.")
-             return
-        admin_password = getpass.getpass("Admin password: ")
+        admin_password = os.environ.get('CISCO_PASSWORD')
+        if not admin_password:
+            # Fallback to prompt even if --yes is used, because we NEED a password
+            admin_password = getpass.getpass("Admin password: ")
     
     if not args.yes:
         print(f"\nTarget devices: {[d['name'] for d in target_devices]}")
