@@ -19,6 +19,7 @@ except ImportError:
 def get_host_alias(ip_address):
     """Map inventory IP to SSH Config Host Alias."""
     mapping = {
+        '192.168.2.11': 'cisco891',
         '192.168.2.21': '2960s1',
         '192.168.2.22': '2960s2',
         '192.168.2.38': '3850s1',
@@ -32,6 +33,7 @@ def run_ssh_command(host, command):
     # We include options to batch mode to avoid hanging
     ssh_cmd = [
         "ssh",
+        "-F", "ssh_config_for_lab",  # Use custom lab config
         "-o", "BatchMode=yes",
         "-o", "ConnectTimeout=5",
         host,
@@ -78,17 +80,33 @@ def get_stp_status(host_alias, vlan=10):
 
 def monitor(vlan=10, interval=2):
     """Monitor STP status across all switches."""
-    switches = [d for d in DEVICES if d['role'] in ['l2_switch', 'l3_switch']]
+    # Include 'router' as per user request (891)
+    switches = [d for d in DEVICES if d['role'] in ['l2_switch', 'l3_switch', 'router']]
     
     # Prepare aliases once
     device_targets = []
     for sw in switches:
         alias = get_host_alias(sw['host'])
         device_targets.append({'name': sw['name'], 'alias': alias})
-        print(f"  Target: {sw['name']} -> {alias}")
+        
+    # Sort based on physical rack layout preference
+    # 1. cisco 891 router (cisco891)
+    # 2. 3850s1 (48 port) (3850s1)
+    # 3. 3850s2 (48 port) (3850s2)
+    # 4. 2960s1 (24 port) (2960s1)
+    # 5. 2960s2 (24 port) (2960s2)
+    
+    order = ['cisco891', '3850s1', '3850s2', '2960s1', '2960s2']
+    
+    # Sort by index in order list, fallback to name if not found
+    device_targets.sort(key=lambda x: order.index(x['alias']) if x['alias'] in order else 999)
+
+    print("Monitoring targets in order:")
+    for dt in device_targets:
+        print(f"  {dt['name']} -> {dt['alias']}")
 
     if not device_targets:
-        print("No L2/L3 switches found in inventory.")
+        print("No devices found in inventory.")
         return
 
     try:

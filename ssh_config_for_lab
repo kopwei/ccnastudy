@@ -52,3 +52,25 @@ Host 2960s2
   PubkeyAcceptedAlgorithms +ssh-rsa
   StrictHostKeyChecking no
   UserKnownHostsFile /dev/null
+
+Host 3850s1
+  Hostname 192.168.2.38
+  User admin
+  IdentityFile ~/.ssh/id_rsa_cisco
+  KexAlgorithms diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1
+  Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+  HostKeyAlgorithms +ssh-rsa
+  PubkeyAcceptedAlgorithms +ssh-rsa
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+
+Host 3850s2
+  Hostname 192.168.2.39
+  User admin
+  IdentityFile ~/.ssh/id_rsa_cisco
+  KexAlgorithms diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1
+  Ciphers aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc
+  HostKeyAlgorithms +ssh-rsa
+  PubkeyAcceptedAlgorithms +ssh-rsa
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
