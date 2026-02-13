@@ -8,7 +8,6 @@ import os
 import sys
 import argparse
 import subprocess
-from netmiko import ConnectHandler
 from prettytable import PrettyTable
 
 try:
@@ -93,28 +92,37 @@ def monitor(vlan=10, interval=2):
         return
 
     try:
+        # Initial clear
+        print("\033[2J\033[H", end="")
+        
         while True:
-            os.system('clear' if os.name == 'posix' else 'cls')
-            print(f"STP Real-Time Monitor (VLAN {vlan}) - Press Ctrl+C to stop")
-            print(f"Time: {time.strftime('%H:%M:%S')}\n")
-            
-            table = PrettyTable()
-            table.field_names = ["Switch", "Interface", "Role", "Status (STP State)"]
+            # 1. Fetch data first (takes time)
+            rows = []
             
             for dev in device_targets:
                 try:
                     status = get_stp_status(dev['alias'], vlan)
                     if not status:
-                         # Either command empty or empty VLAN
-                         # We check if it returned error code first inside get_stp_status
-                         table.add_row([dev['name'], "-", "-", "No active STP ports"])
+                         rows.append([dev['name'], "-", "-", "No active STP ports"])
                     else:
                         for entry in status:
-                            table.add_row([dev['name'], entry['interface'], entry['role'], entry['status']])
+                            rows.append([dev['name'], entry['interface'], entry['role'], entry['status']])
                 except Exception as e:
-                    table.add_row([dev['name'], "Error", "-", str(e)])
+                     rows.append([dev['name'], "Error", "-", str(e)])
+
+            # 2. Build table
+            table = PrettyTable()
+            table.field_names = ["Switch", "Interface", "Role", "Status (STP State)"]
+            for r in rows:
+                table.add_row(r)
             
+            # 3. Clear screen and print strictly for display (Instant refresh)
+            # \033[2J clears screen, \033[H moves cursor to top-left
+            print("\033[2J\033[H", end="")
+            print(f"STP Real-Time Monitor (VLAN {vlan}) - Press Ctrl+C to stop")
+            print(f"Time: {time.strftime('%H:%M:%S')}\n")
             print(table)
+            
             time.sleep(interval)
             
     except KeyboardInterrupt:
