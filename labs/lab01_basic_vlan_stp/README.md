@@ -13,10 +13,10 @@ The goal of this lab is to establish basic Layer 2 connectivity between the swit
 ## Topology
 *   **Switches**: 2x 3850 (3850S1, 3850S2) and 2x 2960S (2960S-1, 2960S-2).
 *   **Connections (Ring Topology)**:
-    1.  **3850S1** [G1/0/1] <--> [G1/0/1] **3850S2**
-    2.  **3850S2** [G1/0/2] <--> [G0/1] **2960S-2**
-    3.  **2960S-2** [G0/2] <--> [G0/2] **2960S-1**
-    4.  **2960S-1** [G0/1] <--> [G1/0/2] **3850S1**
+    1.  **3850S1** [G1/0/25] <--> [G1/0/25] **3850S2**
+    2.  **3850S2** [G1/0/26] <--> [G1/0/1] **2960S-1**
+    3.  **2960S-1** [G1/0/2] <--> [G1/0/1] **2960S-2**
+    4.  **2960S-2** [G1/0/2] <--> [G1/0/26] **3850S1** (Last Link to close loop)
 *   **Trunks**: All inter-switch links should be configured as 802.1Q Trunks.
 
 ## Why VTP before STP?
@@ -27,6 +27,8 @@ The goal of this lab is to establish basic Layer 2 connectivity between the swit
 
 ## Configuration Steps
 
+---
+
 ### Phase 1: Pre-Connection Configuration (Standalone)
 *Perform these steps on each switch via the management network BEFORE connecting the inter-switch cables.*
 
@@ -34,21 +36,26 @@ The goal of this lab is to establish basic Layer 2 connectivity between the swit
 ```ios
 # On all switches
 conf t
-hostname 3850S1  # (Match your inventory: 3850S1, 3850S2, 2960S-1, 2960S-2)
+hostname 3850S1  # (Repeat for 3850S2, 2960S-1, 2960S-2)
 
 # Set VTP Domain and Password
 vtp domain CCNA
 vtp password cisco
 
 # Set Mode
-# On 3850S1:
+# On 3850s:
 vtp mode server
 # On others:
 vtp mode client
 
 # Pre-configure Trunk ports
-interface range g1/0/1 - 2  # (Use correct port numbers for each switch)
-  switchport trunk encapsulation dot1q
+# On 3850s: Using G1/0/25 and G1/0/26 (centered for physical alignment)
+interface range g1/0/25 - 26
+  switchport mode trunk
+exit
+
+# On 2960S: Using G1/0/1 and G1/0/2 (as specified by user)
+interface range g1/0/1 - 2
   switchport mode trunk
 exit
 ```
@@ -64,20 +71,29 @@ vlan 20
 
 ---
 
-### Phase 2: Physical Connectivity & Trunking
-*Connect the inter-switch cables according to the Ring Topology.*
+### Phase 2: Physical Connectivity & Trunking (Observation Ready)
 
-1.  **3850S1 [G1/0/1]** <--> **[G1/0/1] 3850S2**
-2.  **3850S2 [G1/0/2]** <--> **[G0/1] 2960S-2**
-3.  **2960S-2 [G0/2]** <--> **[G0/2] 2960S-1**
-4.  **2960S-1 [G0/1]** <--> **[G1/0/2] 3850S1**
+#### 1. Establish the "Linear" Path (NO LOOP YET)
+*Connect these 3 cables first. This creates a chain based on your rack layout.*
+1.  **3850S1 [G1/0/25]** <--> **[G1/0/25] 3850S2** (Horizontal Top)
+2.  **3850S2 [G1/0/26]** <--> **[G1/0/1] 2960S-1** (Vertical Right)
+3.  **2960S-1 [G1/0/2]** <--> **[G1/0/1] 2960S-2** (Horizontal Bottom)
+
+#### 2. Verify Open Path
+*   Check `show interfaces trunk` on all switches.
+*   Run the monitor: `python3 scripts/monitor_stp.py --vlan 10`. You should see all ports in `FWD` state.
 
 ---
 
-### Phase 3: Post-Connection Optimization (STP)
-*Fine-tune the topology now that the links are active.*
+### Phase 3: STP Convergence & Optimization
 
-#### 1. STP Root Election
+#### 1. The "Moment of Convergence" (TRIGGER THE LOOP)
+*Prepare your Wireshark and Monitor script, then connect the final vertical cable on the left:*
+*   **Final Cable**: **2960S-2 [G1/0/2]** <--> **[G1/0/26] 3850S1** (Vertical Left)
+*   **Observation**: Watch the monitor script. You will see the new link go through `LIS` -> `LRN` -> `BLK`. This takes ~30-50 seconds with standard STP.
+
+#### 2. STP Root Election (Manual Override)
+*Once the loop is stable, force the topology down to the core.*
 ```ios
 # Root Primary (3850S1)
 conf t
@@ -88,11 +104,12 @@ conf t
 spanning-tree vlan 1,10,20 root secondary
 ```
 
-#### 2. Wireshark Monitoring (Optional)
+#### 3. Wireshark Monitoring (Detailed Analysis)
 ```ios
-# On 3850S1
-monitor session 1 source interface g1/0/1 both
-monitor session 1 destination interface g1/0/10
+# Configure SPAN on 3850S1 (Assuming PC is on G1/0/30)
+conf t
+monitor session 1 source interface g1/0/25 both
+monitor session 1 destination interface g1/0/30
 ```
 
 ---
@@ -100,10 +117,20 @@ monitor session 1 destination interface g1/0/10
 ## Validation & Monitoring
 
 1.  **Verify VTP Sync**: `show vlan brief` on Client switches (VLAN 10/20 should appear).
-2.  **Verify Trunks**: `show interfaces trunk` (Status should be "trunking").
-3.  **Verify STP**: `show spanning-tree vlan 10`
-    *   3850S1 should say: `"This bridge is the root"`
-    *   Find the **Blocking (BLK)** port in the ring (usually on one of the 2960S switches).
+2.  **Verify STP Topology**: `show spanning-tree vlan 10`
+    *   3850S1: `"This bridge is the root"`
+    *   Identify the **Alternate/Blocking (ALT/BLK)** port. Note which switch "lost" the election and blocked its port.
+    *   Check for **TCN** traps in your terminal if any.
+
+### Real-Time Monitoring
+```bash
+python3 scripts/monitor_stp.py --vlan 10
+```
+
+## Cleanup
+```bash
+python3 scripts/restore_ssh.py
+```
 
 ### Real-Time Monitoring
 ```bash
