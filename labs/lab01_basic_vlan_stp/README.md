@@ -128,16 +128,11 @@ python3 scripts/monitor_stp.py --vlan 10
 ```
 
 ## Cleanup
+*This will remove all VLANs, SVIs, and reset interfaces to default, but keeps SSH access.*
+
 ```bash
 python3 scripts/restore_ssh.py
 ```
 
-### Real-Time Monitoring
-```bash
-python3 scripts/monitor_stp.py --vlan 10
-```
-
-## Cleanup
-```bash
-python3 scripts/restore_ssh.py
-```
+> [!NOTE]
+> After cleanup, the switches are in a "clean slate" state with only Management IP and SSH enabled. All Lab 01 configs (Trunks, VTP, STP priority) are gone.

@@ -18,7 +18,37 @@ In this lab, we will upgrade our Layer 2 network to a **Layer 3** network. We wi
 
 ## Configuration Steps
 
-### 1. Enable Layer 3 Routing (On 3850S1 ONLY)
+### Phase 1: Layer 2 Infrastructure (Prepare the Foundation)
+*Since Lab 01 cleanup removed all VLANs and Trunks, we must rebuild the Layer 2 network first.*
+
+#### 1. Configure VTP and Trunks (On All Switches)
+```ios
+# On 3850S1, 3850S2, 2960S-1, 2960S-2
+conf t
+vtp domain CCNA
+vtp password cisco
+vtp mode client      # (Set 3850S1 to 'server' in next step)
+
+# Re-enable Trunking on Inter-switch links
+interface range g1/0/25 - 26  # (Adjust for 2960S ports: g1/0/1-2)
+  switchport mode trunk
+exit
+```
+
+#### 2. Create VLANs (On VTP Server 3850S1 Only)
+```ios
+# On 3850S1
+vtp mode server
+vlan 10
+  name Sales
+vlan 20
+  name Engineering
+exit
+```
+
+### Phase 2: Layer 3 Configuration (The New Stuff)
+
+#### 1. Enable Layer 3 Routing (On 3850S1 ONLY)
 By default, the 3850 acts as a Layer 2 switch. We must enable routing globally.
 
 ```ios
