@@ -112,6 +112,7 @@ monitor session 1 source interface g1/0/25 both
 monitor session 1 destination interface g1/0/30
 ```
 
+
 ---
 
 ## Validation & Monitoring

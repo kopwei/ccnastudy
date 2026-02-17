@@ -1,0 +1,41 @@
+---
+- name: Initial Switch Configuration
+  hosts: switches
+  gather_facts: no
+  vars:
+    admin_username: admin
+    admin_password: cisco_password
+    enable_secret: cisco_enable_secret
+    radius_server_name: DALORADIUS
+    radius_server_ip: 192.168.2.100
+    radius_shared_secret: cisco_radius_secret
+
+  tasks:
+    - name: Configure Local User and Enable Secret
+      cisco.ios.ios_config:
+        lines:
+          - username {{ admin_username }} privilege 15 secret {{ admin_password }}
+          - enable secret {{ enable_secret }}
+
+    - name: Configure AAA Radius
+      cisco.ios.ios_config:
+        lines:
+          - aaa new-model
+          - radius server {{ radius_server_name }}
+          - address ipv4 {{ radius_server_ip }} auth-port 1812 acct-port 1813
+          - key {{ radius_shared_secret }}
+          - aaa authentication login default group radius local
+          - aaa authorization exec default group radius local
+          - aaa authorization console
+
+    - name: Apply configuration to VTY lines
+      cisco.ios.ios_config:
+        lines:
+          - login authentication default
+          - authorization exec default
+          - transport input ssh
+        parents: line vty 0 15
+
+    - name: Save configuration
+      cisco.ios.ios_command:
+        commands: write memory

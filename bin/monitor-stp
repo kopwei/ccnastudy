@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""
+STP Convergence Monitor - Observe STP state transitions in real-time.
+"""
+import sys
+import os
+import argparse
+import time
+from prettytable import PrettyTable
+
+# Add lib to path
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib'))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'inventory'))
+
+from netauto.core import run_ssh_command, get_ssh_config_path
+from netauto.utils import parse_stp_output
+from devices import DEVICES
+
+def get_host_alias(ip_address):
+    """Map inventory IP to SSH Config Host Alias."""
+    # TODO: Refactor inventory to store aliases
+    mapping = {
+        '192.168.2.11': 'cisco891',
+        '192.168.2.21': '2960s1',
+        '192.168.2.22': '2960s2',
+        '192.168.2.38': '3850s1',
+        '192.168.2.39': '3850s2',
+    }
+    return mapping.get(ip_address, ip_address)
+
+def get_stp_status(host_alias, vlan=10):
+    """Get STP status for a specific VLAN."""
+    cmd = f"show spanning-tree vlan {vlan}"
+    # Use ssh_config from root
+    config_path = get_ssh_config_path()
+    output = run_ssh_command(host_alias, cmd, config_file=config_path)
+    
+    if output.startswith("Error"):
+        raise Exception(output)
+
+    return parse_stp_output(output)
+
+def monitor(vlan=10, interval=2):
+    """Monitor STP status across all switches."""
+    switches = [d for d in DEVICES if d['role'] in ['l2_switch', 'l3_switch', 'router']]
+    
+    # Prepare targets
+    device_targets = []
+    for sw in switches:
+        alias = get_host_alias(sw['host'])
+        device_targets.append({'name': sw['name'], 'alias': alias})
+        
+    # Sort order
+    order = ['cisco891', '3850s1', '3850s2', '2960s1', '2960s2']
+    device_targets.sort(key=lambda x: order.index(x['alias']) if x['alias'] in order else 999)
+
+    print("Monitoring targets in order:")
+    for dt in device_targets:
+        print(f"  {dt['name']} -> {dt['alias']}")
+
+    if not device_targets:
+        print("No devices found in inventory.")
+        return
+
+    try:
+        print("\033[2J\033[H", end="")
+        while True:
+            rows = []
+            for dev in device_targets:
+                try:
+                    status = get_stp_status(dev['alias'], vlan)
+                    if not status:
+                         rows.append([dev['name'], "-", "-", "No active STP ports"])
+                    else:
+                        for entry in status:
+                            rows.append([dev['name'], entry['interface'], entry['role'], entry['status']])
+                except Exception as e:
+                     rows.append([dev['name'], "Error", "-", str(e)])
+
+            table = PrettyTable()
+            table.field_names = ["Switch", "Interface", "Role", "Status (STP State)"]
+            for r in rows:
+                table.add_row(r)
+            
+            print("\033[2J\033[H", end="")
+            print(f"STP Real-Time Monitor (VLAN {vlan}) - Press Ctrl+C to stop")
+            print(f"Time: {time.strftime('%H:%M:%S')}\n")
+            print(table)
+            
+            time.sleep(interval)
+            
+    except KeyboardInterrupt:
+        print("\nMonitoring stopped.")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='STP Real-Time Monitor')
+    parser.add_argument('--vlan', type=int, default=10, help='VLAN to monitor (default: 10)')
+    parser.add_argument('--interval', type=int, default=2, help='Poll interval in seconds (default: 2)')
+    args = parser.parse_args()
+    
+    monitor(vlan=args.vlan, interval=args.interval)
