@@ -6,7 +6,8 @@ The goal of this lab is to establish basic Layer 2 connectivity between the swit
 ## Study Points
 *   VLAN (Virtual LAN) creation and assignment.
 *   802.1Q Trunking configuration.
-*   VTP (VLAN Trunking Protocol) modes (Server/Client/Transparent).
+*   VLAN (Virtual LAN) creation and assignment.
+*   802.1Q Trunking configuration.
 *   STP (Spanning Tree Protocol) root bridge election and port states.
 *   CDP/LLDP neighbor discovery.
 
@@ -19,10 +20,7 @@ The goal of this lab is to establish basic Layer 2 connectivity between the swit
     4.  **2960S-2** [G1/0/2] <--> [G1/0/26] **3850S1** (Last Link to close loop)
 *   **Trunks**: All inter-switch links should be configured as 802.1Q Trunks.
 
-## Why VTP before STP?
-*   **VTP (Layer 2 Management)**: Automatically synchronizes the VLAN database. While not strictly required for STP to function, it ensures that all switches "know" about the same VLANs, allowing STP to build a loop-free tree for each one consistently.
-*   **STP (Layer 2 Loop Prevention)**: Runs independently for each VLAN (PVST+). By setting up VTP first, we ensure the infrastructure is ready before we start injecting traffic into new VLANs.
-
+---
 ---
 
 ## Configuration Steps
@@ -32,41 +30,36 @@ The goal of this lab is to establish basic Layer 2 connectivity between the swit
 ### Phase 1: Pre-Connection Configuration (Standalone)
 *Perform these steps on each switch via the management network BEFORE connecting the inter-switch cables.*
 
-#### 1. Device Reset & Basic VTP
+#### 1. Device Reset & Base Configs
 ```ios
 # On all switches
 conf t
 hostname 3850S1  # (Repeat for 3850S2, 2960S-1, 2960S-2)
 
-# Set VTP Domain and Password
-vtp domain CCNA
-vtp password cisco
-
-# Set Mode
-# On 3850s:
-vtp mode server
-# On others:
-vtp mode client
+# Disable VTP (Optional, to avoid interference)
+vtp mode transparent
 
 # Pre-configure Trunk ports
-# On 3850s: Using G1/0/25 and G1/0/26 (centered for physical alignment)
+# On 3850s: Using G1/0/25 and G1/0/26
 interface range g1/0/25 - 26
   switchport mode trunk
 exit
 
-# On 2960S: Using G1/0/1 and G1/0/2 (as specified by user)
+# On 2960S: Using G1/0/1 and G1/0/2
 interface range g1/0/1 - 2
   switchport mode trunk
 exit
 ```
 
-#### 2. VLAN Creation (On VTP Server ONLY)
+#### 2. VLAN Creation (On ALL Switches)
+*Since we are not using VTP, VLANs must be created manually on every switch.*
 ```ios
-# On 3850S1
+# On all switches
 vlan 10
   name Sales
 vlan 20
   name Engineering
+exit
 ```
 
 ---
@@ -117,7 +110,7 @@ monitor session 1 destination interface g1/0/30
 
 ## Validation & Monitoring
 
-1.  **Verify VTP Sync**: `show vlan brief` on Client switches (VLAN 10/20 should appear).
+1.  **Verify VLANs**: `show vlan brief` on all switches (VLAN 10/20 should exist).
 2.  **Verify STP Topology**: `show spanning-tree vlan 10`
     *   3850S1: `"This bridge is the root"`
     *   Identify the **Alternate/Blocking (ALT/BLK)** port. Note which switch "lost" the election and blocked its port.
