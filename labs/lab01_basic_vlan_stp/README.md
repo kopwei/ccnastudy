@@ -9,7 +9,8 @@ The goal of this lab is to establish basic Layer 2 connectivity between the swit
 *   VLAN (Virtual LAN) creation and assignment.
 *   802.1Q Trunking configuration.
 *   STP (Spanning Tree Protocol) root bridge election and port states.
-*   CDP/LLDP neighbor discovery.
+*   CDP (Cisco Discovery Protocol) & LLDP (Link Layer Discovery Protocol).
+*   Device management and security (CDP/LLDP hardening).
 
 ## Topology
 *   **Switches**: 2x 3850 (3850S1, 3850S2) and 2x 2960S (2960S-1, 2960S-2).
@@ -97,14 +98,33 @@ conf t
 spanning-tree vlan 1,10,20 root secondary
 ```
 
-#### 3. Wireshark Monitoring (Detailed Analysis)
+#### 3. Discovery Protocols (Verify Topology)
+*Use CDP and LLDP to verify that your cables are plugged into the correct ports.*
+
 ```ios
-# Configure SPAN on 3850S1 (Assuming PC is on G1/0/30)
+# 1. Verify CDP (On by default)
+show cdp neighbors
+show cdp neighbors detail
+
+# 2. Enable and Verify LLDP (Off by default)
 conf t
-monitor session 1 source interface g1/0/25 both
-monitor session 1 destination interface g1/0/30
+lldp run
+exit
+show lldp neighbors
 ```
 
+#### 4. Security Hardening (Disable on Management ports)
+*In the real world, you should disable discovery protocols on ports facing untrusted networks.*
+
+```ios
+# Disable CDP on management interfaces (example)
+interface Vlan99
+  no cdp enable
+exit
+
+# Globally disable CDP (if needed)
+# no cdp run
+```
 
 ---
 
