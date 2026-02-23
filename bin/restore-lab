@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""
+Lab Restoration Script - Reset devices using the modular library.
+"""
+import sys
+import os
+import argparse
+
+# Add lib to path
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'lib'))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'inventory'))
+
+from netauto.tasks import cleanup_device
+from devices import DEVICES
+
+def main():
+    parser = argparse.ArgumentParser(description='Clean up Cisco lab devices')
+    parser.add_argument('--devices', nargs='+', help='Filter devices by name')
+    args = parser.parse_args()
+
+    target_devices = DEVICES
+    if args.devices:
+        target_devices = [d for d in DEVICES if any(f.lower() in d['name'].lower() for f in args.devices)]
+
+    for device in target_devices:
+        print(f"Restoring {device['name']}...")
+        cleanup_device(device)
+
+if __name__ == "__main__":
+    main()
